@@ -460,7 +460,7 @@ export default function Dashboard() {
                                   : "text-rose-600 dark:text-rose-400",
                               )}
                             >
-                              {currentPnl >= 0 ? "+" : ""}${currentPnl.toFixed(0)}
+                              {currentPnl >= 0 ? "+" : ""}${currentPnl.toFixed(4)}
                             </span>
                           </div>
                         </div>
