@@ -1,4 +1,4 @@
-const BASE = process.env["NEXT_PUBLIC_BACKEND_URL"] ?? "http://aegisai.mooo.com";
+const BASE = process.env["NEXT_PUBLIC_BACKEND_URL"] ?? "https://aegisai.mooo.com";
 
 async function post(path: string, body?: unknown) {
   const res = await fetch(`${BASE}/api${path}`, {
