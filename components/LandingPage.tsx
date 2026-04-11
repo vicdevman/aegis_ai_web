@@ -21,7 +21,7 @@ interface LandingPageProps {
   onEnter: () => void;
 }
 
-const easing = [0.23, 1, 0.32, 1];
+const easing: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
 export default function LandingPage({ onEnter }: LandingPageProps) {
   return (
