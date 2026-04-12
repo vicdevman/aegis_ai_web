@@ -20,21 +20,24 @@ import {
   Maximize2,
   Search,
   Copy,
-  Trash2,
   Wallet,
-  Info,
   CheckCircle2,
   AlertCircle,
-  XCircle,
   Play,
   Pause,
   Sparkles,
   AlertTriangle,
+  LayoutDashboard,
+  History,
+  Info,
+  Menu,
+  X,
+  Home,
 } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { Modal } from "@/components/Modal";
 import clsx from "clsx";
 import Image from "next/image";
+import Link from "next/link";
 
 function StatusDot({ connected }: { connected: boolean }) {
   return (
@@ -217,43 +220,89 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-50 via-slate-100 to-indigo-50/50 dark:from-slate-900 dark:via-slate-950 dark:to-black text-slate-900 dark:text-slate-50 font-sans transition-colors duration-300">
-      {/* Header */}
-      <header className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3 sm:py-4 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-white/5 transition-colors">
-        <div className="flex items-center gap-2 sm:gap-4">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/logo_color_black.png"
-              alt="aegisAi Logo"
-              width={500}
-              height={500}
-              className="w-5 h-5 block dark:hidden"
-            />
-            <Image
-              src="/logo_color_white.png"
-              alt="aegisAi Logo"
-              width={500}
-              height={500}
-              className="w-5 h-5 hidden dark:block"
-            />
-            <span className="text-lg sm:text-xl font-bold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-slate-900 to-slate-500 dark:from-white dark:to-slate-400">
-              aegisAi
-            </span>
+      {/* Header with Centered Navigation - Desktop */}
+      <header className="sticky top-0 z-50 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-white/5 transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-2 shrink-0">
+              <Image
+                src="/logo_color_black.png"
+                alt="aegisAi"
+                width={500}
+                height={500}
+                className="w-5 h-5 block dark:hidden"
+              />
+              <Image
+                src="/logo_color_white.png"
+                alt="aegisAi"
+                width={500}
+                height={500}
+                className="w-5 h-5 hidden dark:block"
+              />
+              <span className="font-semibold tracking-tight">aegis</span>
+            </Link>
+
+            {/* Desktop Navigation - Centered */}
+            <nav className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-900/50 rounded-full p-1">
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm"
+              >
+                <LayoutDashboard size={16} />
+                Dashboard
+              </Link>
+              <Link
+                href="/history"
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800 transition-all"
+              >
+                <History size={16} />
+                History
+              </Link>
+            </nav>
+
+            {/* Status */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 hidden sm:block">Live</span>
+              </div>
+              <span className="hidden lg:inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 ring-1 ring-slate-200 dark:ring-white/10">
+                {(serverStatus["mode"] as string) ?? "paper"}
+              </span>
+            </div>
           </div>
-          <span className="hidden sm:inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 ring-1 ring-slate-200 dark:ring-white/10 transition-colors">
-            {(serverStatus["mode"] as string) ?? "paper"}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-4">
-          <div className="flex items-center text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-900/50 px-3 sm:px-4 py-2 rounded-full ring-1 ring-slate-200 dark:ring-white/5 transition-colors">
-            <StatusDot connected={state.connected} />
-            <span className="hidden sm:inline">{state.connected ? "System Online" : "Disconnected"}</span>
-            <span className="sm:hidden">{state.connected ? "Online" : "Offline"}</span>
-          </div>
-          <ThemeToggle />
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8">
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800/50 safe-area-pb">
+        <div className="flex items-center justify-around py-2">
+          <Link
+            href="/"
+            className="flex flex-col items-center gap-1 px-4 py-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+          >
+            <Home size={20} />
+            <span className="text-[10px] font-medium">Home</span>
+          </Link>
+          <Link
+            href="/dashboard"
+            className="flex flex-col items-center gap-1 px-4 py-2 text-slate-900 dark:text-white"
+          >
+            <LayoutDashboard size={20} />
+            <span className="text-[10px] font-medium">Dashboard</span>
+          </Link>
+          <Link
+            href="/history"
+            className="flex flex-col items-center gap-1 px-4 py-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+          >
+            <History size={20} />
+            <span className="text-[10px] font-medium">History</span>
+          </Link>
+        </div>
+      </nav>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8 pb-20 md:pb-8">
         {/* Metrics Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {/* <MetricCard
@@ -269,7 +318,7 @@ export default function Dashboard() {
           <MetricCard
             label="Balance"
             value={state.portfolio?.balance != null ? `$${state.portfolio.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
-            sub={state.portfolio?.summary || "Waiting..."}
+            sub={state.portfolio?.summary}
             icon={Wallet}
           />
           <MetricCard
@@ -471,9 +520,8 @@ export default function Dashboard() {
               </div>
             </section>
           </div>
-
-       
         </div>
+
       </main>
 
       {/* Expanded Logs Modal */}

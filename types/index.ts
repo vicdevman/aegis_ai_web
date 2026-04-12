@@ -74,6 +74,14 @@ export interface Position {
   pnlPct?: number;
 }
 
+// Position History from API (includes MongoDB fields)
+export interface PositionHistory extends Position {
+  _id: string;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
 export type CloseReason =
   | "STOP_LOSS"
   | "TAKE_PROFIT"

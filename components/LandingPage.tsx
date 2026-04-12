@@ -16,14 +16,11 @@ import {
   Clock,
 } from "lucide-react";
 import Image from "next/image";
-
-interface LandingPageProps {
-  onEnter: () => void;
-}
+import Link from "next/link";
 
 const easing: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
-export default function LandingPage({ onEnter }: LandingPageProps) {
+export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white overflow-x-hidden selection:bg-cyan-500/30">
       {/* Ambient Background */}
@@ -64,12 +61,12 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-xs font-medium text-emerald-400">Live</span>
           </div>
-          <button 
-            onClick={onEnter}
+          <Link 
+            href="/dashboard"
             className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm font-medium hover:bg-white/10 transition-colors"
           >
             Dashboard
-          </button>
+          </Link>
         </div>
       </nav>
 
@@ -105,13 +102,13 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
 
             {/* CTA */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button
-                onClick={onEnter}
+              <Link
+                href="/dashboard"
                 className="group flex items-center gap-2 px-7 py-3.5 rounded-xl bg-white text-slate-950 font-medium hover:scale-[1.02] transition-transform"
               >
                 See It In Action
-                <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
-              </button>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
               {/* <div className="flex items-center gap-2 text-slate-500 text-sm">
                 <Lock size={14} />
                 <span>Paper trading available</span>
@@ -270,13 +267,13 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
                 in the dashboard.
               </p>
               
-              <button
-                onClick={onEnter}
+              <Link
+                href="/dashboard"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-slate-950 font-medium hover:scale-[1.02] transition-transform"
               >
                 Launch Dashboard
-                <ArrowRight size={18} />
-              </button>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
           </motion.div>
         </div>
