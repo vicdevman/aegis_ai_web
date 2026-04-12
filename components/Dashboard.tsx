@@ -166,6 +166,9 @@ export default function Dashboard() {
   const [serverStatus, setServerStatus] = useState<Record<string, unknown>>({});
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const filteredLogs = state.logs.filter((log) =>
     log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -278,13 +281,6 @@ export default function Dashboard() {
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800/50 safe-area-pb">
         <div className="flex items-center justify-around py-2">
-          <Link
-            href="/"
-            className="flex flex-col items-center gap-1 px-4 py-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-          >
-            <Home size={20} />
-            <span className="text-[10px] font-medium">Home</span>
-          </Link>
           <Link
             href="/dashboard"
             className="flex flex-col items-center gap-1 px-4 py-2 text-slate-900 dark:text-white"
@@ -420,16 +416,82 @@ export default function Dashboard() {
                   <span className="hidden sm:inline">Start Bot</span>
                   <span className="sm:hidden">Start</span>
                 </button>
-                <button
-                  onClick={() =>
-                    api.stopBot().then(() => api.status().then(setServerStatus))
-                  }
-                  className="group relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium tracking-wide border transition-all bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 hover:border-rose-300 dark:hover:border-rose-500/30 hover:scale-[1.02] cursor-pointer text-sm sm:text-base"
-                >
-                  <Power size={16} className="sm:w-[18px] sm:h-[18px]" />
-                  <span className="hidden sm:inline">Stop Bot</span>
-                  <span className="sm:hidden">Stop</span>
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setIsPasswordModalOpen(true);
+                      setPassword("");
+                      setPasswordError("");
+                    }}
+                    className="group relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium tracking-wide border transition-all bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 hover:border-rose-300 dark:hover:border-rose-500/30 hover:scale-[1.02] cursor-pointer text-sm sm:text-base"
+                  >
+                    <Power size={16} className="sm:w-[18px] sm:h-[18px]" />
+                    <span className="hidden sm:inline">Stop Bot</span>
+                    <span className="sm:hidden">Stop</span>
+                  </button>
+
+                  {/* Password Popup */}
+                  {isPasswordModalOpen && (
+                    <div className="absolute top-full left-0 mt-2 z-50 w-64 sm:w-72 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
+                        Enter password to stop bot
+                      </p>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          setPasswordError("");
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            if (password === "vicdevman123") {
+                              setIsPasswordModalOpen(false);
+                              setPassword("");
+                              api.stopBot().then(() => api.status().then(setServerStatus));
+                            } else {
+                              setPasswordError("Wrong password");
+                            }
+                          }
+                        }}
+                        placeholder="Password..."
+                        className="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 focus:border-rose-500/50 rounded-lg py-2 px-3 text-sm outline-none transition-all mb-2"
+                        autoFocus
+                      />
+                      {passwordError && (
+                        <p className="text-xs text-rose-600 dark:text-rose-400 mb-2">
+                          {passwordError}
+                        </p>
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setIsPasswordModalOpen(false);
+                            setPassword("");
+                            setPasswordError("");
+                          }}
+                          className="flex-1 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium transition-all"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (password === "vicdevman123") {
+                              setIsPasswordModalOpen(false);
+                              setPassword("");
+                              api.stopBot().then(() => api.status().then(setServerStatus));
+                            } else {
+                              setPasswordError("Wrong password");
+                            }
+                          }}
+                          className="flex-1 px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-xs font-medium transition-all"
+                        >
+                          Stop
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
              
               </div>
             </section>
@@ -592,6 +654,7 @@ export default function Dashboard() {
           </div>
         </div>
       </Modal>
+
     </div>
   );
 }

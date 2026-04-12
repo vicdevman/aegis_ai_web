@@ -107,13 +107,6 @@ export default function HistoryPage() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800/50 safe-area-pb">
         <div className="flex items-center justify-around py-2">
           <Link
-            href="/"
-            className="flex flex-col items-center gap-1 px-4 py-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-          >
-            <Home size={20} />
-            <span className="text-[10px] font-medium">Home</span>
-          </Link>
-          <Link
             href="/dashboard"
             className="flex flex-col items-center gap-1 px-4 py-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
           >

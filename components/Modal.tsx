@@ -8,13 +8,14 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  preventClose?: boolean;
 }
 
-export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
-  // Close on Escape key
+export const Modal = ({ isOpen, onClose, title, children, preventClose = false }: ModalProps) => {
+  // Close on Escape key (disabled when preventClose is true)
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (!preventClose && e.key === "Escape") onClose();
     };
     if (isOpen) {
       window.addEventListener("keydown", handleEscape);
@@ -24,7 +25,7 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
       window.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "unset";
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, preventClose]);
 
   return (
     <AnimatePresence>
@@ -35,7 +36,7 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={!preventClose ? onClose : undefined}
             className="absolute inset-0 bg-slate-950/60 dark:bg-slate-950/90 backdrop-blur-sm"
           />
           
@@ -53,13 +54,15 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
                   {title}
                 </h3>
               </div>
-              <button
-                onClick={onClose}
-                className="group p-2 sm:p-3 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-all hover:scale-110 active:scale-95 border border-transparent hover:border-slate-300 dark:hover:border-slate-700 shrink-0"
-                aria-label="Close"
-              >
-                <X size={20} className="sm:w-6 sm:h-6 group-hover:rotate-90 transition-transform duration-300" />
-              </button>
+              {!preventClose && (
+                <button
+                  onClick={onClose}
+                  className="group p-2 sm:p-3 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-all hover:scale-110 active:scale-95 border border-transparent hover:border-slate-300 dark:hover:border-slate-700 shrink-0"
+                  aria-label="Close"
+                >
+                  <X size={20} className="sm:w-6 sm:h-6 group-hover:rotate-90 transition-transform duration-300" />
+                </button>
+              )}
             </div>
             
             {/* Content - Adjusted padding for mobile */}
