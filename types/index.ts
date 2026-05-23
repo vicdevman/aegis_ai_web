@@ -72,6 +72,14 @@ export interface Position {
   closeReason?: CloseReason;
   pnl?: number;
   pnlPct?: number;
+  _formatted?: {
+    entryPrice?: string;
+    currentPrice?: string;
+    stopLoss?: string;
+    takeProfit?: string;
+    pnl?: string;
+    volume?: string;
+  };
 }
 
 // Position History from API (includes MongoDB fields)
@@ -120,7 +128,7 @@ export interface SystemMessagePayload {
 export interface PortfolioUpdatePayload {
   message: string;
   balance: number;
-  currencies: Record<string, string>;
+  currencies: Array<{ currency: string; total: number; free?: number; used?: number }>;
   summary: string;
 }
 

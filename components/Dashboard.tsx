@@ -126,8 +126,8 @@ function MetricCard({
   trend?: "up" | "down" | "neutral";
 }) {
   return (
-    <div className="relative group overflow-hidden rounded-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 p-6 transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:border-slate-300/60 dark:hover:border-slate-700/60">
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+    <div className="relative group overflow-hidden rounded-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 p-4 transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:border-slate-300/60 dark:hover:border-slate-700/60">
+      <div className="absolute inset-0 bg-linear-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
       <div className="flex justify-between items-start mb-4">
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
           {label}
@@ -137,7 +137,7 @@ function MetricCard({
         </div>
       </div>
       <div>
-        <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1 break-words max-w-full">
+        <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1 wrap-break-word max-w-full">
           {value}
         </h3>
         {sub && (
@@ -185,7 +185,7 @@ export default function Dashboard() {
         setPortfolio({
           message: `Portfolio balance: $${status.portfolioBalance.toFixed(2)} USD`,
           balance: status.portfolioBalance,
-          currencies: (status as any).currencies || {},
+          currencies: (status as any).currencies || [],
           summary: "",
         });
       }
@@ -248,8 +248,16 @@ export default function Dashboard() {
       : "text-rose-600 dark:text-rose-400";
   const activePos = Object.values(state.positions);
 
+  // Fallback formatter when backend doesn't provide `_formatted`
+  const formatPrice = (n: number | undefined) => {
+    if (n == null || Number.isNaN(n)) return "—";
+    const abs = Math.abs(n);
+    if (abs >= 1) return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return n.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 });
+  };
+
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-50 via-slate-100 to-indigo-50/50 dark:from-slate-900 dark:via-slate-950 dark:to-black text-slate-900 dark:text-slate-50 font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,var(--tw-gradient-stops))] from-slate-50 via-slate-100 to-indigo-50/50 dark:from-slate-900 dark:via-slate-950 dark:to-black text-slate-900 dark:text-slate-50 font-sans transition-colors duration-300">
       {/* Header with Centered Navigation - Desktop */}
       <header className="sticky top-0 z-50 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-white/5 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -349,7 +357,7 @@ export default function Dashboard() {
                         setPortfolio({
                           message: `Portfolio balance: $${(s as any).portfolioBalance.toFixed(2)} USD`,
                           balance: (s as any).portfolioBalance,
-                          currencies: (s as any).currencies || {},
+                          currencies: (s as any).currencies || [],
                           summary: "",
                         });
                       }
@@ -403,7 +411,7 @@ export default function Dashboard() {
         </div>
 
         {/* Assets breakdown (shows all currency balances from portfolio) */}
-        {state.portfolio?.currencies && Object.keys(state.portfolio.currencies).length > 0 && (
+        {Array.isArray(state.portfolio?.currencies) && state.portfolio.currencies.length > 0 && (
           <div className="mt-3">
             <section className="p-4 rounded-2xl bg-white/40 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/50">
               <div className="flex items-center justify-between mb-3">
@@ -411,10 +419,15 @@ export default function Dashboard() {
                 <p className="text-xs text-slate-500">Full breakdown</p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {Object.entries(state.portfolio.currencies).map(([sym, amt]) => (
-                  <div key={sym} className="p-2 rounded-lg bg-white/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-left">
-                    <div className="text-xs text-slate-500">{sym}</div>
-                    <div className="font-medium text-sm text-slate-900 dark:text-white break-words">{Number(amt).toLocaleString(undefined, { maximumFractionDigits: 8 })}</div>
+                {state.portfolio.currencies.map((c) => (
+                  <div key={c.currency} className="p-2 rounded-lg bg-white/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-left">
+                    <div className="text-xs text-slate-500">{c.currency}</div>
+                    <div className="font-medium text-sm text-slate-900 dark:text-white wrap-break-word">{Number(c.total).toLocaleString(undefined, { maximumFractionDigits: 8 })}</div>
+                    {typeof c.free === 'number' || typeof c.used === 'number' ? (
+                      <div className="text-[11px] text-slate-500 mt-1">
+                        {typeof c.free === 'number' ? `free: ${c.free}` : ''} {typeof c.used === 'number' ? `used: ${c.used}` : ''}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -446,7 +459,7 @@ export default function Dashboard() {
                   <Maximize2 size={14} className="sm:w-4 sm:h-4" />
                 </button>
               </div>
-              <div className="flex-1 p-3 sm:p-6 overflow-y-auto font-mono text-[10px] sm:text-xs space-y-2 sm:space-y-3 max-h-[400px] sm:max-h-[600px] scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent">
+              <div className="flex-1 p-3 sm:p-6 overflow-y-auto font-mono text-[10px] sm:text-xs space-y-2 sm:space-y-3 max-h-100 sm:max-h-150 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent">
                 {loading ? (
                   <div className="space-y-2">
                     {Array.from({ length: 6 }).map((_, i) => (
@@ -470,7 +483,7 @@ export default function Dashboard() {
                       <span className={getLogBadgeStyle(log)}>
                         {log.subType && log.type === "SYSTEM_MESSAGE" ? log.subType : log.type}
                       </span>
-                      <span className="text-slate-700 dark:text-slate-300 break-words text-xs sm:text-sm leading-relaxed pt-0.5">
+                      <span className="text-slate-700 dark:text-slate-300 wrap-break-word text-xs sm:text-sm leading-relaxed pt-0.5">
                         {log.message}
                       </span>
                     </div>
@@ -502,7 +515,7 @@ export default function Dashboard() {
                   }
                   className="group relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium tracking-wide border transition-all bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 hover:border-emerald-300 dark:hover:border-emerald-500/30 hover:scale-[1.02] cursor-pointer text-sm sm:text-base"
                 >
-                  <Zap size={16} className="sm:w-[18px] sm:h-[18px] group-hover:animate-pulse" />
+                  <Zap size={16} className="sm:w-4.5 sm:h-4.5 group-hover:animate-pulse" />
                   <span className="hidden sm:inline">Start Bot</span>
                   <span className="sm:hidden">Start</span>
                 </button>
@@ -515,7 +528,7 @@ export default function Dashboard() {
                     }}
                     className="group relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium tracking-wide border transition-all bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 hover:border-rose-300 dark:hover:border-rose-500/30 hover:scale-[1.02] cursor-pointer text-sm sm:text-base"
                   >
-                    <Power size={16} className="sm:w-[18px] sm:h-[18px]" />
+                    <Power size={16} className="sm:w-4.5 sm:h-4.5" />
                     <span className="hidden sm:inline">Stop Bot</span>
                     <span className="sm:hidden">Stop</span>
                   </button>
@@ -636,7 +649,7 @@ export default function Dashboard() {
                               Entry
                             </span>
                             <span className="font-medium text-slate-800 dark:text-slate-200">
-                              ${pos.entryPrice.toLocaleString()}
+                              ${pos._formatted?.entryPrice ?? formatPrice(pos.entryPrice)}
                             </span>
                           </div>
                           <div className="flex flex-col">
@@ -644,7 +657,7 @@ export default function Dashboard() {
                               Current
                             </span>
                             <span className="font-medium text-slate-800 dark:text-slate-200">
-                              ${(pos.currentPrice ?? pos.entryPrice).toLocaleString()}
+                              ${pos._formatted?.currentPrice ?? formatPrice(pos.currentPrice ?? pos.entryPrice)}
                             </span>
                           </div>
                           <div className="flex flex-col">
@@ -652,7 +665,7 @@ export default function Dashboard() {
                               SL / TP
                             </span>
                             <span className="font-medium text-slate-600 dark:text-slate-400">
-                              ${pos.stopLoss.toFixed(0)} / ${pos.takeProfit.toFixed(0)}
+                              ${pos._formatted?.stopLoss ?? formatPrice(pos.stopLoss)} / ${pos._formatted?.takeProfit ?? formatPrice(pos.takeProfit)}
                             </span>
                           </div>
                           <div className="flex flex-col">
@@ -662,12 +675,12 @@ export default function Dashboard() {
                             <span
                               className={clsx(
                                 "font-semibold",
-                                currentPnl >= 0
+                                (pos.pnl ?? 0) >= 0
                                   ? "text-emerald-600 dark:text-emerald-400"
                                   : "text-rose-600 dark:text-rose-400",
                               )}
                             >
-                              {currentPnl >= 0 ? "+" : ""}${currentPnl.toFixed(4)}
+                              {pos._formatted?.pnl ?? `${(pos.pnl ?? 0) >= 0 ? '+' : ''}$${(pos.pnl ?? 0).toFixed(4)}`}
                             </span>
                           </div>
                         </div>
@@ -741,7 +754,7 @@ export default function Dashboard() {
                       <span className="sm:hidden">{log.subType && log.type === "SYSTEM_MESSAGE" ? log.subType.slice(0, 8) : log.type.slice(0, 8)}</span>
                     </span>
                   </div>
-                  <span className="text-slate-700 dark:text-slate-200 break-words leading-relaxed flex-1 text-xs sm:text-sm pl-0 sm:pl-0">
+                  <span className="text-slate-700 dark:text-slate-200 wrap-break-word leading-relaxed flex-1 text-xs sm:text-sm pl-0 sm:pl-0">
                     {log.message}
                   </span>
                 </div>
