@@ -46,7 +46,7 @@ export const Modal = ({ isOpen, onClose, title, children, preventClose = false }
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", duration: 0.35, bounce: 0.1 }}
-            className="relative w-full h-full sm:max-w-6xl sm:h-[90vh] md:h-[85vh] flex flex-col bg-white dark:bg-slate-900 sm:rounded-2xl border-0 sm:border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xl">
+            className="relative w-full h-full sm:max-w-xl sm:h-[80vh] md:h-[85vh] flex flex-col bg-white dark:bg-slate-900 sm:rounded-2xl border-0 sm:border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xl">
             {/* Header - More compact on mobile */}
             <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md shrink-0">
               <div className="flex flex-col min-w-0 flex-1 mr-4">

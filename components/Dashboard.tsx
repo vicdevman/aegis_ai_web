@@ -166,6 +166,9 @@ export default function Dashboard() {
   const [serverStatus, setServerStatus] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [positionsMissingPrices, setPositionsMissingPrices] = useState<string[]>([]);
+  const [isStopDialogOpen, setIsStopDialogOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<null | "stop_bot" | "close_all">(null);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -182,10 +185,18 @@ export default function Dashboard() {
     // Helper to update portfolio from status response
     const updatePortfolioFromStatus = (status: Record<string, unknown>) => {
       if (typeof status.portfolioBalance === "number") {
+        // Normalize currencies: backend may send object or array
+        const raw = (status as any).currencies;
+        let currencies: any[] = [];
+        if (Array.isArray(raw)) {
+          currencies = raw;
+        } else if (raw && typeof raw === 'object') {
+          currencies = Object.entries(raw).map(([k, v]) => ({ currency: k, total: Number(v) }));
+        }
         setPortfolio({
           message: `Portfolio balance: $${status.portfolioBalance.toFixed(2)} USD`,
           balance: status.portfolioBalance,
-          currencies: (status as any).currencies || [],
+          currencies: currencies,
           summary: "",
         });
       }
@@ -214,6 +225,13 @@ export default function Dashboard() {
               return acc;
             }, {});
             setPositions(posMap);
+
+            // Detect missing/zero currentPrice values from initial fetch
+            const missing = positions.filter((p: Position) => !p.currentPrice || Number(p.currentPrice) === 0)
+              .map((p: Position) => p.pair);
+            if (missing.length > 0) {
+              setPositionsMissingPrices(missing);
+            }
           }
         } else {
           setLoadError((e) => (e ? e + "; failed to load positions" : "Failed to load positions"));
@@ -254,6 +272,11 @@ export default function Dashboard() {
     const abs = Math.abs(n);
     if (abs >= 1) return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return n.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 });
+  };
+
+  const generateBackendAgentMessage = () => {
+    if (positionsMissingPrices.length === 0) return "";
+    return `Observed missing currentPrice for positions: ${positionsMissingPrices.join(', ')}. On initial GET /api/positions these positions had \"currentPrice\" equal to 0 or missing and their PnL values were placeholders (e.g. -100). Please investigate why the backend returned missing price data on initial fetch. Suggested checks:\n\n1) Verify that when building /api/positions the backend attempts to use position.currentPrice if present, otherwise fetches latest ticker for the pair.\n2) Log whether ticker fetch failed or returned null for these pairs.\n3) If ticker provider rate-limited or returned errors, retry logic or fallback behavior should be implemented.\n4) Provide an endpoint /api/positions/refresh_prices that forces re-calculation of currentPrice and pnl for existing positions, and return the updated positions in the same enriched format.\n\nAffected pairs: ${positionsMissingPrices.join(', ')}\nTimestamp: ${new Date().toISOString()}\n\nPlease respond with the root cause and confirm ETA for a fix.`;
   };
 
   return (
@@ -439,7 +462,7 @@ export default function Dashboard() {
 
 
    {/* Side Column: Log */}
-          <div className="lg:col-span-2 order-2 lg:order-1">
+          <div className="lg:col-span-2 order-2 lg:order-2">
             <section className="h-full flex flex-col rounded-2xl bg-slate-50/80 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800/80 overflow-hidden ring-1 shadow-slate-200 dark:shadow-none ring-slate-100 dark:ring-white/5 transition-colors">
               <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-200 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/50 flex items-center justify-between">
                 <div className="flex items-center gap-2 sm:gap-3">
@@ -494,7 +517,7 @@ export default function Dashboard() {
           </div>
 
           {/* Controls & Positions */}
-          <div className="lg:col-span-2 space-y-6 sm:space-y-8 order-1 lg:order-2">
+          <div className="lg:col-span-2 space-y-6 sm:space-y-8 order-1 lg:order-1">
             {/* Bot Controls */}
             <section className="p-4 sm:p-6 rounded-2xl bg-white/40 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/50 backdrop-blur-sm transition-colors">
               <div className="flex items-center gap-3 mb-4 sm:mb-6">
@@ -506,7 +529,7 @@ export default function Dashboard() {
                   Execution Controls
                 </h2>
               </div>
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                 <button
                   onClick={() =>
                     api
@@ -519,10 +542,22 @@ export default function Dashboard() {
                   <span className="hidden sm:inline">Start Bot</span>
                   <span className="sm:hidden">Start</span>
                 </button>
+                {/* <button
+                  onClick={() => {
+                    setPendingAction("close_all");
+                    setIsStopDialogOpen(true);
+                  }}
+                  className="group relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-medium tracking-wide border transition-all bg-slate-50 dark:bg-slate-800/10 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/20 hover:border-slate-300 dark:hover:border-slate-700/30 hover:scale-[1.02] cursor-pointer text-sm sm:text-base"
+                >
+                  <X size={16} />
+                  <span className="hidden sm:inline">Close All Trades</span>
+                  <span className="sm:hidden">Close All</span>
+                </button> */}
                 <div className="relative">
                   <button
                     onClick={() => {
-                      setIsPasswordModalOpen(true);
+                      setPendingAction("stop_bot");
+                      setIsStopDialogOpen(true);
                       setPassword("");
                       setPasswordError("");
                     }}
@@ -548,7 +583,7 @@ export default function Dashboard() {
                         }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
-                            if (password === "vicdevman123") {
+                            if (password === "12345678") {
                               setIsPasswordModalOpen(false);
                               setPassword("");
                               api.stopBot().then(() => api.status().then(setServerStatus));
@@ -579,7 +614,7 @@ export default function Dashboard() {
                         </button>
                         <button
                           onClick={() => {
-                            if (password === "vicdevman123") {
+                            if (password === "12345678") {
                               setIsPasswordModalOpen(false);
                               setPassword("");
                               api.stopBot().then(() => api.status().then(setServerStatus));
@@ -601,11 +636,16 @@ export default function Dashboard() {
 
             {/* Active Positions */}
             <section>
-              <div className="flex items-center gap-3 mb-4 sm:mb-6 px-2">
+                <div className="flex items-center gap-3 mb-4 sm:mb-6 px-2">
                 <Box className="text-slate-600 dark:text-slate-400" size={18} />
                 <h2 className="text-base sm:text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
                   Active Positions
                 </h2>
+                {positionsMissingPrices.length > 0 && (
+                  <div className="ml-auto text-xs text-amber-700 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded">
+                    Warning: missing prices for {positionsMissingPrices.join(', ')}
+                  </div>
+                )}
               </div>
               <div className="space-y-3 sm:space-y-4">
                 {loading ? (
@@ -694,6 +734,53 @@ export default function Dashboard() {
         </div>
 
       </main>
+
+      {/* Stop / Close All confirmation modal (password gated) */}
+      <Modal
+        isOpen={isStopDialogOpen}
+        onClose={() => { setIsStopDialogOpen(false); setPendingAction(null); setPasswordError(""); }}
+        title={pendingAction === "stop_bot" ? "Stop Bot — enter password" : "Confirm Close All Trades — enter password"}
+        preventClose={false}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">Enter your password to confirm this action. <br/> PASSWORD: 12345678</p>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setPasswordError(""); }}
+            className="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 focus:border-indigo-500/50 rounded-lg py-2 px-3 text-sm outline-none"
+            autoFocus
+          />
+          {passwordError && <div className="text-xs text-rose-600">{passwordError}</div>}
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setIsStopDialogOpen(false); setPendingAction(null); setPassword(""); setPasswordError(""); }}
+              className="flex-1 px-3 py-2 rounded-lg bg-slate-100 text-slate-700"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                if (password !== "12345678") {
+                  setPasswordError("Wrong password");
+                  return;
+                }
+                if (pendingAction === "stop_bot") {
+                  await api.stopBot().then(() => api.status().then(setServerStatus));
+                } else if (pendingAction === "close_all") {
+                  await api.closeAllPositions().catch(() => setLoadError("Failed to close positions"));
+                }
+                setIsStopDialogOpen(false);
+                setPendingAction(null);
+                setPassword("");
+              }}
+              className="flex-1 px-3 py-2 rounded-lg bg-rose-500 text-white"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Expanded Logs Modal */}
       <Modal

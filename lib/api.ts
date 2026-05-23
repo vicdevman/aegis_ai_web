@@ -21,4 +21,5 @@ export const api = {
   setStrategy: (s: string)     => post("/bot/strategy", { strategy: s }),
   positions: ()                => get("/positions"),
   positionHistory: (limit?: number) => get(`/positions/history${limit ? `?limit=${limit}` : ""}`),
+  closeAllPositions: ()        => post("/positions/close_all"),
 };
