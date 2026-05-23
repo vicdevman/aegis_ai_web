@@ -20,5 +20,5 @@ export const api = {
   stopBot: ()                  => post("/bot/stop"),
   setStrategy: (s: string)     => post("/bot/strategy", { strategy: s }),
   positions: ()                => get("/positions"),
-  positionHistory: ()          => get("/positions/history"),
+  positionHistory: (limit?: number) => get(`/positions/history${limit ? `?limit=${limit}` : ""}`),
 };

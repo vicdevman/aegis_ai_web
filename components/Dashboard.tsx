@@ -122,7 +122,7 @@ function MetricCard({
   label: string;
   value: string;
   sub?: string;
-  icon: any;
+  icon: React.ComponentType<any>;
   trend?: "up" | "down" | "neutral";
 }) {
   return (
@@ -137,7 +137,7 @@ function MetricCard({
         </div>
       </div>
       <div>
-        <h3 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">
+        <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1 break-words max-w-full">
           {value}
         </h3>
         {sub && (
@@ -164,6 +164,8 @@ function MetricCard({
 export default function Dashboard() {
   const { state, setPositions, setPortfolio } = useAegisSocket();
   const [serverStatus, setServerStatus] = useState<Record<string, unknown>>({});
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -183,36 +185,61 @@ export default function Dashboard() {
         setPortfolio({
           message: `Portfolio balance: $${status.portfolioBalance.toFixed(2)} USD`,
           balance: status.portfolioBalance,
-          currencies: {},
+          currencies: (status as any).currencies || {},
           summary: "",
         });
       }
     };
 
-    // Load initial data on mount
-    api.status().then((status) => {
-      setServerStatus(status);
-      updatePortfolioFromStatus(status);
-    }).catch(() => {});
-    api.positions().then((positions) => {
-      if (Array.isArray(positions)) {
-        const posMap = positions.reduce((acc: Record<string, Position>, pos: Position) => {
-          acc[pos.id] = pos;
-          return acc;
-        }, {});
-        setPositions(posMap);
+    let mounted = true;
+    const fetchInitial = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const [statusRes, positionsRes] = await Promise.allSettled([api.status(), api.positions()]);
+        if (!mounted) return;
+
+        if (statusRes.status === "fulfilled") {
+          setServerStatus(statusRes.value);
+          updatePortfolioFromStatus(statusRes.value);
+        } else {
+          setLoadError("Failed to load server status");
+        }
+
+        if (positionsRes.status === "fulfilled") {
+          const positions = positionsRes.value;
+          if (Array.isArray(positions)) {
+            const posMap = positions.reduce((acc: Record<string, Position>, pos: Position) => {
+              acc[pos.id] = pos;
+              return acc;
+            }, {});
+            setPositions(posMap);
+          }
+        } else {
+          setLoadError((e) => (e ? e + "; failed to load positions" : "Failed to load positions"));
+        }
+      } catch (e) {
+        setLoadError("Unexpected error while loading data");
+      } finally {
+        if (mounted) setLoading(false);
       }
-    }).catch(() => {});
+    };
+
+    fetchInitial();
 
     // Poll status every 5 seconds
-    const t = setInterval(
-      () => api.status().then((status) => {
-        setServerStatus(status);
-        updatePortfolioFromStatus(status);
-      }).catch(() => {}),
-      5000,
-    );
-    return () => clearInterval(t);
+    const t = setInterval(async () => {
+      try {
+        const status = await api.status();
+        if (mounted) {
+          setServerStatus(status);
+          updatePortfolioFromStatus(status);
+        }
+      } catch (e) {
+        // ignore polling errors, keep last good state
+      }
+    }, 5000);
+    return () => { mounted = false; clearInterval(t); };
   }, [setPortfolio, setPositions]);
 
   const pnlColor =
@@ -230,20 +257,20 @@ export default function Dashboard() {
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0">
               <Image
-                src="/logo_color_black.png"
+                src="/logo-bg.ico"
                 alt="aegisAi"
                 width={500}
                 height={500}
                 className="w-5 h-5 block dark:hidden"
               />
               <Image
-                src="/logo_color_white.png"
+                src="/logo-bg.ico"
                 alt="aegisAi"
                 width={500}
                 height={500}
                 className="w-5 h-5 hidden dark:block"
               />
-              <span className="font-semibold tracking-tight">aegis</span>
+              <span className="font-semibold tracking-tight">Aegis</span>
             </Link>
 
             {/* Desktop Navigation - Centered */}
@@ -299,44 +326,101 @@ export default function Dashboard() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8 pb-20 md:pb-8">
+        {loadError && (
+          <div className="rounded-xl p-3 bg-rose-50 dark:bg-rose-900/40 border border-rose-200 dark:border-rose-800 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="text-rose-600" />
+              <div>
+                <div className="text-sm font-semibold text-rose-700">Failed to load initial data</div>
+                <div className="text-xs text-rose-600">{loadError}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  // re-trigger effect by calling fetch via simple page reload alternative
+                  // but better trigger same fetch: call api again
+                  setLoading(true);
+                  setLoadError(null);
+                  api.status()
+                    .then((s) => {
+                      setServerStatus(s);
+                      if (typeof (s as any).portfolioBalance === "number") {
+                        setPortfolio({
+                          message: `Portfolio balance: $${(s as any).portfolioBalance.toFixed(2)} USD`,
+                          balance: (s as any).portfolioBalance,
+                          currencies: (s as any).currencies || {},
+                          summary: "",
+                        });
+                      }
+                    })
+                    .catch(() => setLoadError("Retry failed"))
+                    .finally(() => setLoading(false));
+                }}
+                className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-sm"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
         {/* Metrics Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-          {/* <MetricCard
-            label="BTC Price"
-            value={
-              state.market
-                ? `$${Number(state.market.price).toLocaleString()}`
-                : "—"
-            }
-            sub="XBTUSD"
-            icon={Activity}
-          /> */}
-          <MetricCard
-            label="Balance"
-            value={state.portfolio?.balance != null ? `$${state.portfolio.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
-            sub={state.portfolio?.summary}
-            icon={Wallet}
-          />
-          <MetricCard
-            label="Daily PnL"
-            value={`$${state.dailyPnL.toFixed(2)}`}
-            sub={state.dailyPnL >= 0 ? "Today" : "Today"}
-            icon={state.dailyPnL >= 0 ? TrendingUp : TrendingDown}
-            trend={state.dailyPnL >= 0 ? "up" : "down"}
-          />
-          <MetricCard
-            label="Positions"
-            value={String(activePos.length)}
-            sub={`${serverStatus["activeWatchers"] ?? 0} watchers`}
-            icon={Box}
-          />
-          <MetricCard
-            label="Server Uptime"
-            value={`${serverStatus["uptime"] ?? 0}s`}
-            sub="Bot Instance"
-            icon={Server}
-          />
+          {loading ? (
+            // Skeleton placeholders
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800/40 p-6 h-24" />
+            ))
+          ) : (
+            <>
+              <MetricCard
+                label="Balance"
+                value={state.portfolio?.balance != null ? `$${state.portfolio.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+                sub={state.portfolio?.summary}
+                icon={Wallet}
+              />
+              <MetricCard
+                label="Daily PnL"
+                value={`$${state.dailyPnL.toFixed(2)}`}
+                sub={state.dailyPnL >= 0 ? "Today" : "Today"}
+                icon={state.dailyPnL >= 0 ? TrendingUp : TrendingDown}
+                trend={state.dailyPnL >= 0 ? "up" : "down"}
+              />
+              <MetricCard
+                label="Positions"
+                value={String(activePos.length)}
+                sub={`${serverStatus["activeWatchers"] ?? 0} watchers`}
+                icon={Box}
+              />
+              <MetricCard
+                label="Server Uptime"
+                value={`${serverStatus["uptime"] ?? 0}s`}
+                sub="Bot Instance"
+                icon={Server}
+              />
+            </>
+          )}
         </div>
+
+        {/* Assets breakdown (shows all currency balances from portfolio) */}
+        {state.portfolio?.currencies && Object.keys(state.portfolio.currencies).length > 0 && (
+          <div className="mt-3">
+            <section className="p-4 rounded-2xl bg-white/40 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/50">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold">Assets</h3>
+                <p className="text-xs text-slate-500">Full breakdown</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {Object.entries(state.portfolio.currencies).map(([sym, amt]) => (
+                  <div key={sym} className="p-2 rounded-lg bg-white/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-left">
+                    <div className="text-xs text-slate-500">{sym}</div>
+                    <div className="font-medium text-sm text-slate-900 dark:text-white break-words">{Number(amt).toLocaleString(undefined, { maximumFractionDigits: 8 })}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
 
@@ -363,7 +447,13 @@ export default function Dashboard() {
                 </button>
               </div>
               <div className="flex-1 p-3 sm:p-6 overflow-y-auto font-mono text-[10px] sm:text-xs space-y-2 sm:space-y-3 max-h-[400px] sm:max-h-[600px] scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent">
-                {state.logs.length === 0 ? (
+                {loading ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="h-4 sm:h-5 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+                    ))}
+                  </div>
+                ) : state.logs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-32 sm:h-40 text-slate-400 dark:text-slate-600">
                     <Clock size={18} className="sm:w-5 sm:h-5 mb-2 opacity-50" />
                     <span className="text-xs sm:text-sm">Awaiting system events...</span>
@@ -505,7 +595,13 @@ export default function Dashboard() {
                 </h2>
               </div>
               <div className="space-y-3 sm:space-y-4">
-                {activePos.length === 0 ? (
+                {loading ? (
+                  <div className="p-4 space-y-3">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                      <div key={i} className="h-20 rounded-lg bg-slate-100 dark:bg-slate-800/40 animate-pulse" />
+                    ))}
+                  </div>
+                ) : activePos.length === 0 ? (
                   <div className="p-8 sm:p-12 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700/50 flex flex-col items-center justify-center text-slate-500">
                     <Box size={28} className="sm:w-8 sm:h-8 mb-3 opacity-20" />
                     <p className="text-xs sm:text-sm font-medium">No active positions</p>

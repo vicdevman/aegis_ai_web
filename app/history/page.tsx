@@ -21,15 +21,30 @@ import { motion } from "framer-motion";
 
 export default function HistoryPage() {
   const [tradeHistory, setTradeHistory] = useState<PositionHistory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  useEffect(() => {
-    api.positionHistory().then((history) => {
+  const fetchHistory = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const history = await api.positionHistory(1000);
       if (Array.isArray(history)) {
         setTradeHistory(history as PositionHistory[]);
+      } else {
+        setError("Invalid response from server");
       }
-    }).catch(() => {});
+    } catch (e) {
+      setError("Failed to load trade history");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistory();
   }, []);
 
   // Stats
@@ -56,21 +71,21 @@ export default function HistoryPage() {
           <div className="flex items-center justify-between h-14 sm:h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0">
-              <Image
-                src="/logo_color_black.png"
+           <Image
+                src="/logo-bg.ico"
                 alt="aegisAi"
                 width={500}
                 height={500}
                 className="w-5 h-5 block dark:hidden"
               />
               <Image
-                src="/logo_color_white.png"
+                src="/logo-bg.ico"
                 alt="aegisAi"
                 width={500}
                 height={500}
                 className="w-5 h-5 hidden dark:block"
               />
-              <span className="font-semibold tracking-tight">aegis</span>
+              <span className="font-semibold tracking-tight">Aegis</span>
             </Link>
 
             {/* Desktop Navigation - Centered */}
@@ -126,9 +141,7 @@ export default function HistoryPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 pb-20 md:pb-8">
         {/* Page Title */}
         <div className="flex items-center gap-3 mb-6 sm:mb-8">
-          <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center">
-            <History size={20} className="text-indigo-600 dark:text-indigo-400" />
-          </div>
+      
           <div>
             <h1 className="text-xl sm:text-2xl font-semibold">Trade History</h1>
             <p className="text-sm text-slate-500">Complete record of all closed positions</p>
@@ -186,7 +199,18 @@ export default function HistoryPage() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="rounded-2xl bg-white/40 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/50 overflow-hidden"
         >
-          {tradeHistory.length === 0 ? (
+          {loading ? (
+            <div className="p-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-12 mb-3 rounded-lg bg-slate-100 dark:bg-slate-800/40 animate-pulse" />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="p-8 flex flex-col items-center">
+              <div className="text-rose-600 font-semibold mb-2">{error}</div>
+              <button onClick={() => fetchHistory()} className="px-4 py-2 bg-rose-500 text-white rounded-lg">Retry</button>
+            </div>
+          ) : tradeHistory.length === 0 ? (
             <div className="p-12 sm:p-16 flex flex-col items-center justify-center text-slate-500">
               <History size={40} className="mb-4 opacity-20" />
               <p className="text-base">No trade history yet</p>
